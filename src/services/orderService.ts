@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export interface Order {
   id: string;
@@ -21,7 +22,7 @@ export interface OrderItem {
   product_id: string | null;
   product_name: string;
   quantity: number;
-  options: any[];
+  options: any[]; // Change to any[] to match expected type
   price: number;
   size: string | null;
 }
@@ -55,7 +56,11 @@ export const addOrderItem = async (item: Omit<OrderItem, 'id'>): Promise<OrderIt
     throw error;
   }
 
-  return data;
+  // Convert Json options to array
+  return {
+    ...data,
+    options: Array.isArray(data.options) ? data.options : []
+  };
 };
 
 // Get user orders
@@ -102,7 +107,11 @@ export const getOrderItems = async (orderId: string): Promise<OrderItem[]> => {
     throw error;
   }
 
-  return data || [];
+  // Convert Json options to array
+  return (data || []).map(item => ({
+    ...item,
+    options: Array.isArray(item.options) ? item.options : []
+  }));
 };
 
 // Update order status

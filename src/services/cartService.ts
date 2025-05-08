@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/services/authService";
+import { Json } from "@/integrations/supabase/types";
 
 export interface CartItem {
   id: string;
@@ -8,7 +8,7 @@ export interface CartItem {
   product_id: string | null;
   quantity: number;
   price: number;
-  options: any[];
+  options: any[]; // Match the expected type
   size: string | null;
   selected_option_id: string | null;
   selected_size_id: string | null;
@@ -70,7 +70,11 @@ export const getCartItems = async (cartId: string): Promise<CartItem[]> => {
     throw error;
   }
 
-  return data || [];
+  // Convert Json options to array
+  return (data || []).map(item => ({
+    ...item,
+    options: Array.isArray(item.options) ? item.options : []
+  }));
 };
 
 // Add item to cart
@@ -86,7 +90,11 @@ export const addItemToCart = async (item: Omit<CartItem, 'id'>): Promise<CartIte
     throw error;
   }
 
-  return data;
+  // Convert Json options to array
+  return {
+    ...data,
+    options: Array.isArray(data.options) ? data.options : []
+  };
 };
 
 // Update cart item
@@ -103,7 +111,11 @@ export const updateCartItem = async (id: string, updates: Partial<CartItem>): Pr
     throw error;
   }
 
-  return data;
+  // Convert Json options to array
+  return {
+    ...data,
+    options: Array.isArray(data.options) ? data.options : []
+  };
 };
 
 // Remove item from cart

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,8 @@ const Account = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [username, setUsername] = useState(user?.username || '');
+  // Use name as username or empty string if not available
+  const [username, setUsername] = useState(user?.name || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -47,7 +47,8 @@ const Account = () => {
     setIsProfileSubmitting(true);
     
     try {
-      await updateProfile({ username, avatar_url: avatarUrl });
+      // Pass name instead of username in the update
+      await updateProfile({ name: username, avatar_url: avatarUrl });
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
@@ -156,7 +157,7 @@ const Account = () => {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h2 className="text-xl font-medium">{user.username || user.email}</h2>
+              <h2 className="text-xl font-medium">{user.name || user.email}</h2>
               <p className="text-gray-600">{user.email}</p>
             </div>
           </div>

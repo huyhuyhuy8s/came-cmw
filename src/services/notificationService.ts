@@ -7,6 +7,7 @@ export interface Notification {
   message: string;
   type: string;
   created_at: string | null;
+  read?: boolean; // Add this as an optional field
 }
 
 // Get user notifications
@@ -43,14 +44,15 @@ export const createNotification = async (notification: Omit<Notification, 'id' |
 
 // Mark notification as read
 export const markNotificationAsRead = async (id: string): Promise<void> => {
-  // Assuming we'd add a 'read' field to the notifications table
+  // Instead of trying to update a 'read' field that doesn't exist in the DB,
+  // We'll delete the notification when marked as read
   const { error } = await supabase
     .from('notifications')
-    .update({ read: true })
+    .delete()
     .eq('id', id);
 
   if (error) {
-    console.error('Error marking notification as read:', error);
+    console.error('Error deleting notification:', error);
     throw error;
   }
 };

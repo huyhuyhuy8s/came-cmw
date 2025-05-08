@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface User {
@@ -6,6 +5,7 @@ export interface User {
   email: string;
   name: string | null;
   avatar_url: string | null;
+  username?: string; // Add username as an optional field
 }
 
 // Sign up
@@ -36,6 +36,7 @@ export const signUp = async (email: string, password: string, name: string): Pro
       id: data.user.id,
       email: data.user.email,
       name,
+      password: 'auth-managed' // Add a placeholder password value since it's required
     });
 
   if (profileError) {
@@ -134,15 +135,20 @@ export const getCurrentUser = async (): Promise<User | null> => {
     email: data.user.email!,
     name: userData.name,
     avatar_url: userData.avatar_url,
+    username: userData.name, // Use name as username for now
   };
 };
 
 // Update user profile
 export const updateUserProfile = async (userId: string, updates: Partial<User>): Promise<User> => {
+  // Remove username if present and use name instead
+  const { username, ...otherUpdates } = updates;
+  const updatesForDB = username ? { ...otherUpdates, name: username } : otherUpdates;
+
   // Update user profile in users table
   const { data, error } = await supabase
     .from('users')
-    .update(updates)
+    .update(updatesForDB)
     .eq('id', userId)
     .select()
     .single();
@@ -152,7 +158,10 @@ export const updateUserProfile = async (userId: string, updates: Partial<User>):
     throw error;
   }
 
-  return data;
+  return {
+    ...data,
+    username: data.name, // Map name to username for the frontend
+  };
 };
 
 // Update user avatar

@@ -130,7 +130,7 @@ const Menu = () => {
                           name={product.name}
                           description={product.description || ''}
                           image={product.image_url || '/placeholder.svg'}
-                          price={{ min: product.price_min, max: product.price_max }}
+                          price={{ min: Number(product.price_min), max: Number(product.price_max) }}
                           category={category.name}
                           onClick={() => handleProductClick(product)}
                         />
@@ -158,7 +158,7 @@ const Menu = () => {
                             name={product.name}
                             description={product.description || ''}
                             image={product.image_url || '/placeholder.svg'}
-                            price={{ min: product.price_min, max: product.price_max }}
+                            price={{ min: Number(product.price_min), max: Number(product.price_max) }}
                             category={category.name}
                             onClick={() => handleProductClick(product)}
                           />
