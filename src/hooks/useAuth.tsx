@@ -1,7 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import authService, { User } from '@/services/authService';
+import * as authService from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from "@/integrations/supabase/client";
+import { User } from '@/services/authService';
 
 interface AuthContextProps {
   user: User | null;
@@ -22,11 +24,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   
   useEffect(() => {
-    // Check if user is already logged in
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          // When we have a session, fetch the user profile
+          if (session.user) {
+            // Use setTimeout to avoid potential deadlocks
+            setTimeout(async () => {
+              try {
+                const userProfile = await authService.getCurrentUser();
+                setUser(userProfile);
+              } catch (error) {
+                console.error('Error fetching user profile:', error);
+              }
+            }, 0);
+          }
+        } else {
+          // No session means user is signed out
+          setUser(null);
+        }
+      }
+    );
+    
+    // Check for existing session
     const checkAuth = async () => {
       try {
-        const user = await authService.checkExistingSession();
-        setUser(user);
+        const userProfile = await authService.getCurrentUser();
+        setUser(userProfile);
       } catch (error) {
         console.error('Auth initialization error:', error);
       } finally {
@@ -35,21 +60,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     checkAuth();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
   
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const user = await authService.login(email, password);
+      const user = await authService.signIn(email, password);
       setUser(user);
       toast({
         title: 'Login successful',
-        description: `Welcome back, ${user.username || user.email}!`,
+        description: `Welcome back, ${user.name || user.email}!`,
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Login failed',
-        description: error instanceof Error ? error.message : 'Invalid credentials',
+        description: error.message || 'Invalid credentials',
         variant: 'destructive',
       });
       throw error;
@@ -61,16 +90,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, username: string) => {
     setIsLoading(true);
     try {
-      const user = await authService.register(email, password, username);
+      const user = await authService.signUp(email, password, username);
       setUser(user);
       toast({
         title: 'Registration successful',
         description: `Welcome to Came, ${username || email}!`,
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Registration failed',
-        description: error instanceof Error ? error.message : 'Could not create account',
+        description: error.message || 'Could not create account',
         variant: 'destructive',
       });
       throw error;
@@ -82,13 +111,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     setIsLoading(true);
     try {
-      await authService.logout();
+      await authService.signOut();
       setUser(null);
       toast({
         title: 'Logged out',
         description: 'You have been successfully logged out.',
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
         description: 'Could not log out properly.',
@@ -107,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: 'Password reset email sent',
         description: 'Check your inbox for instructions to reset your password.',
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
         description: 'Could not send password reset email.',
@@ -122,13 +151,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (data: Partial<User>) => {
     setIsLoading(true);
     try {
-      const updatedUser = await authService.updateProfile(data);
+      if (!user) throw new Error('No user logged in');
+      
+      const updatedUser = await authService.updateUserProfile(user.id, data);
       setUser(updatedUser);
       toast({
         title: 'Profile updated',
         description: 'Your profile has been successfully updated.',
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
         description: 'Could not update your profile.',

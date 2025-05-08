@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,16 +17,20 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import * as orderService from '@/services/orderService';
+import * as notificationService from '@/services/notificationService';
 
 const Cart = () => {
-  const { items, updateQuantity, removeItem, clearCart, getCartTotal } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { items, updateQuantity, removeItem, clearCart, getCartTotal, isLoading } = useCart();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [orderType, setOrderType] = useState('store'); // 'store', 'delivery', 'takeaway'
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryTime, setDeliveryTime] = useState('');
   const [pickupTime, setPickupTime] = useState('');
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   
   // Available time slots
   const timeSlots = [
@@ -37,13 +41,14 @@ const Cart = () => {
     '05:00 PM', '05:30 PM', '06:00 PM'
   ];
   
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!isAuthenticated) {
       toast({
         title: "Authentication Required",
         description: "Please sign in to place an order",
         variant: "destructive",
       });
+      navigate('/signin');
       return;
     }
     
@@ -83,26 +88,85 @@ const Cart = () => {
       });
       return;
     }
+
+    setIsProcessingOrder(true);
     
-    // Mock order placement
-    toast({
-      title: "Order Placed!",
-      description: `Your ${orderType} order has been placed successfully.`,
-    });
-    
-    // In a real app, this would send the order to the backend
-    console.log("Order placed:", {
-      items,
-      orderType,
-      deliveryAddress,
-      deliveryTime,
-      pickupTime,
-      total: getCartTotal(),
-    });
-    
-    // Clear cart after successful order
-    clearCart();
+    try {
+      // Calculate totals
+      const subtotal = getCartTotal();
+      const tax = subtotal * 0.1;
+      const deliveryFee = orderType === 'delivery' ? 5 : 0;
+      const total = subtotal + tax + deliveryFee;
+      
+      // Create order
+      const order = await orderService.createOrder({
+        user_id: user?.id,
+        subtotal,
+        tax,
+        tip: 0,
+        delivery_fee: deliveryFee,
+        total,
+        delivery_option: orderType,
+        delivery_address: deliveryAddress,
+        delivery_time: orderType === 'delivery' ? deliveryTime : orderType === 'takeaway' ? pickupTime : null,
+        status: 'pending',
+      });
+      
+      // Add order items
+      const orderItemPromises = items.map(item => 
+        orderService.addOrderItem({
+          order_id: order.id,
+          product_id: item.product_id,
+          product_name: item.name,
+          quantity: item.quantity,
+          options: item.options || [],
+          price: item.price,
+          size: item.size || null,
+        })
+      );
+      
+      await Promise.all(orderItemPromises);
+      
+      // Create notification
+      if (user) {
+        await notificationService.createNotification({
+          user_id: user.id,
+          message: `Your order has been placed. Order status: pending`,
+          type: 'order_placed',
+        });
+      }
+      
+      // Clear cart after successful order
+      await clearCart();
+      
+      // Show success message
+      toast({
+        title: "Order Placed!",
+        description: `Your ${orderType} order has been placed successfully.`,
+      });
+      
+      // Redirect to success page or orders page
+      navigate('/account');
+      
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem placing your order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingOrder(false);
+    }
   };
+  
+  if (isLoading) {
+    return (
+      <div className="py-16 came-container flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+      </div>
+    );
+  }
   
   if (items.length === 0) {
     return (
@@ -209,11 +273,20 @@ const Cart = () => {
                 <span className="font-mono">${(getCartTotal() * 0.1).toFixed(2)}</span>
               </div>
               
+              {orderType === 'delivery' && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Delivery Fee</span>
+                  <span className="font-mono">$5.00</span>
+                </div>
+              )}
+              
               <Separator className="my-2" />
               
               <div className="flex justify-between font-medium">
                 <span>Total</span>
-                <span className="font-mono">${(getCartTotal() * 1.1).toFixed(2)}</span>
+                <span className="font-mono">
+                  ${(getCartTotal() * 1.1 + (orderType === 'delivery' ? 5 : 0)).toFixed(2)}
+                </span>
               </div>
             </div>
             
@@ -298,8 +371,14 @@ const Cart = () => {
             <Button 
               className="w-full bg-black hover:bg-gray-800" 
               onClick={handlePlaceOrder}
+              disabled={isProcessingOrder}
             >
-              {isAuthenticated ? 'Place Order' : 'Sign In to Order'}
+              {isProcessingOrder ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                  <span>Processing...</span>
+                </div>
+              ) : isAuthenticated ? 'Place Order' : 'Sign In to Order'}
             </Button>
             
             {!isAuthenticated && (

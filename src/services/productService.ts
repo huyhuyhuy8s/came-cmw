@@ -1,158 +1,122 @@
 
-// This is a mock service that would be replaced with actual API calls to Supabase
-import { ProductOption, ProductSize } from '@/components/ProductDialog';
+import { supabase } from "@/integrations/supabase/client";
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
-  description: string;
-  base_price: number;
-  image: string;
-  category: string;
-  options?: ProductOption[];
-  sizes?: ProductSize[];
+  description: string | null;
+  price_min: number;
+  price_max: number;
+  image_url: string | null;
+  category_id: string | null;
 }
 
-// Mock data for demonstration
-const PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: "Drip Coffee",
-    description: "Batch brewed coffee",
-    base_price: 3.50,
-    image: "/lovable-uploads/624d2ca0-4248-41b4-80b9-aa0cfee9eb6d.png", 
-    category: "Coffee",
-    options: [
-      { id: 1, name: "Regular", price_adjustment: 0 },
-      { id: 2, name: "Strong", price_adjustment: 0.5 },
-    ],
-    sizes: [
-      { id: 1, name: "Small", price_adjustment: 0 },
-      { id: 2, name: "Medium", price_adjustment: 1 },
-      { id: 3, name: "Large", price_adjustment: 2 },
-    ],
-  },
-  {
-    id: 2,
-    name: "Latte",
-    description: "Espresso with steamed milk",
-    base_price: 4.50,
-    image: "/lovable-uploads/a944091e-cc01-482f-877c-c3b474d20013.png",
-    category: "Lattes & Seasonal",
-    options: [
-      { id: 3, name: "Regular", price_adjustment: 0 },
-      { id: 4, name: "Vanilla", price_adjustment: 0.75 },
-      { id: 5, name: "Caramel", price_adjustment: 0.75 },
-    ],
-    sizes: [
-      { id: 4, name: "Small", price_adjustment: 0 },
-      { id: 5, name: "Medium", price_adjustment: 1 },
-      { id: 6, name: "Large", price_adjustment: 2 },
-    ],
-  },
-  {
-    id: 3,
-    name: "Iced Coffee",
-    description: "Brewed hot over ice",
-    base_price: 4.25,
-    image: "/lovable-uploads/b571cd5f-7223-4d8c-8d16-bfb5bdeef89d.png",
-    category: "Other Drinks",
-    options: [
-      { id: 6, name: "Regular", price_adjustment: 0 },
-      { id: 7, name: "Vanilla", price_adjustment: 0.75 },
-      { id: 8, name: "Caramel", price_adjustment: 0.75 },
-    ],
-    sizes: [
-      { id: 7, name: "Small", price_adjustment: 0 },
-      { id: 8, name: "Medium", price_adjustment: 1 },
-      { id: 9, name: "Large", price_adjustment: 2 },
-    ],
-  },
-  {
-    id: 4,
-    name: "Cappuccino",
-    description: "Equal parts espresso, steamed milk, and foam",
-    base_price: 4.75,
-    image: "/lovable-uploads/a944091e-cc01-482f-877c-c3b474d20013.png",
-    category: "Lattes & Seasonal",
-    options: [
-      { id: 9, name: "Regular", price_adjustment: 0 },
-      { id: 10, name: "Extra foam", price_adjustment: 0 },
-    ],
-    sizes: [
-      { id: 10, name: "Small", price_adjustment: 0 },
-      { id: 11, name: "Medium", price_adjustment: 1 },
-      { id: 12, name: "Large", price_adjustment: 2 },
-    ],
-  },
-  {
-    id: 5,
-    name: "Cold Brew",
-    description: "Steeped for 12 hours",
-    base_price: 4.75,
-    image: "/lovable-uploads/624d2ca0-4248-41b4-80b9-aa0cfee9eb6d.png",
-    category: "Other Drinks",
-    options: [
-      { id: 11, name: "Regular", price_adjustment: 0 },
-      { id: 12, name: "Vanilla", price_adjustment: 0.75 },
-      { id: 13, name: "Caramel", price_adjustment: 0.75 },
-    ],
-    sizes: [
-      { id: 13, name: "Small", price_adjustment: 0 },
-      { id: 14, name: "Medium", price_adjustment: 1 },
-      { id: 15, name: "Large", price_adjustment: 2 },
-    ],
-  },
-  {
-    id: 6,
-    name: "Mocha",
-    description: "Espresso with chocolate and steamed milk",
-    base_price: 5.25,
-    image: "/lovable-uploads/a944091e-cc01-482f-877c-c3b474d20013.png",
-    category: "Lattes & Seasonal",
-    options: [
-      { id: 14, name: "Regular", price_adjustment: 0 },
-      { id: 15, name: "White chocolate", price_adjustment: 0.75 },
-      { id: 16, name: "Extra chocolate", price_adjustment: 0.75 },
-    ],
-    sizes: [
-      { id: 16, name: "Small", price_adjustment: 0 },
-      { id: 17, name: "Medium", price_adjustment: 1 },
-      { id: 18, name: "Large", price_adjustment: 2 },
-    ],
-  },
-];
+export interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+}
 
-// Define categories
-const CATEGORIES = ["Coffee", "Lattes & Seasonal", "Non Food Item", "Merchandise", "Other Drinks"];
+export interface ProductOption {
+  id: string;
+  label: string;
+  value: string;
+  price_adjustment: number;
+}
 
-// Service functions
+export interface ProductSize {
+  id: string;
+  label: string;
+  value: string;
+  price: number;
+}
+
+// Get all products
 export const getProducts = async (): Promise<Product[]> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(PRODUCTS), 500);
-  });
+  const { data, error } = await supabase
+    .from('products')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching products:', error);
+    throw error;
+  }
+
+  return data || [];
 };
 
-export const getProductById = async (id: number): Promise<Product | null> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    const product = PRODUCTS.find(p => p.id === id) || null;
-    setTimeout(() => resolve(product), 300);
-  });
+// Get product by id
+export const getProductById = async (id: string): Promise<Product | null> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // Product not found
+    }
+    console.error('Error fetching product:', error);
+    throw error;
+  }
+
+  return data;
 };
 
-export const getProductsByCategory = async (category: string): Promise<Product[]> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    const filteredProducts = PRODUCTS.filter(p => p.category === category);
-    setTimeout(() => resolve(filteredProducts), 500);
-  });
+// Get products by category
+export const getProductsByCategory = async (categoryId: string): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('category_id', categoryId);
+
+  if (error) {
+    console.error('Error fetching products by category:', error);
+    throw error;
+  }
+
+  return data || [];
 };
 
-export const getCategories = async (): Promise<string[]> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(CATEGORIES), 300);
-  });
+// Get all categories
+export const getCategories = async (): Promise<Category[]> => {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching categories:', error);
+    throw error;
+  }
+
+  return data || [];
+};
+
+// Get product options
+export const getProductOptions = async (): Promise<ProductOption[]> => {
+  const { data, error } = await supabase
+    .from('product_options')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching product options:', error);
+    throw error;
+  }
+
+  return data || [];
+};
+
+// Get product sizes
+export const getProductSizes = async (): Promise<ProductSize[]> => {
+  const { data, error } = await supabase
+    .from('product_sizes')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching product sizes:', error);
+    throw error;
+  }
+
+  return data || [];
 };

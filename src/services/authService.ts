@@ -1,117 +1,201 @@
 
-// This is a mock service that would be replaced with actual Supabase authentication
+import { supabase } from "@/integrations/supabase/client";
+
 export interface User {
   id: string;
   email: string;
-  username: string | null;
+  name: string | null;
   avatar_url: string | null;
 }
 
-interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
-
-// Simulated storage
-let currentUser: User | null = null;
-
-// Check if user is already logged in (from localStorage in a real app)
-const checkExistingSession = (): Promise<User | null> => {
-  return new Promise((resolve) => {
-    const savedUser = localStorage.getItem('came-user');
-    const user = savedUser ? JSON.parse(savedUser) : null;
-    currentUser = user;
-    setTimeout(() => resolve(user), 500);
-  });
-};
-
-// Register
-const register = async (email: string, password: string, username: string): Promise<User> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // In a real app, this would call Supabase auth.signUp
-  const newUser: User = {
-    id: `user_${Math.floor(Math.random() * 10000)}`,
+// Sign up
+export const signUp = async (email: string, password: string, name: string): Promise<User> => {
+  const { data, error } = await supabase.auth.signUp({
     email,
-    username,
+    password,
+    options: {
+      data: {
+        name,
+      },
+    },
+  });
+
+  if (error) {
+    console.error('Error signing up:', error);
+    throw error;
+  }
+
+  if (!data.user) {
+    throw new Error('No user data returned');
+  }
+
+  // Create user profile in the users table
+  const { error: profileError } = await supabase
+    .from('users')
+    .insert({
+      id: data.user.id,
+      email: data.user.email,
+      name,
+    });
+
+  if (profileError) {
+    console.error('Error creating user profile:', profileError);
+    throw profileError;
+  }
+
+  return {
+    id: data.user.id,
+    email: data.user.email!,
+    name,
     avatar_url: null,
   };
-  
-  currentUser = newUser;
-  localStorage.setItem('came-user', JSON.stringify(newUser));
-  
-  return newUser;
 };
 
-// Login
-const login = async (email: string, password: string): Promise<User> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // In a real app, this would call Supabase auth.signInWithPassword
-  // For demo, we'll create a mock user
-  if (email && password) { // Just check that they're not empty
-    const user: User = {
-      id: `user_${Math.floor(Math.random() * 10000)}`,
-      email,
-      username: email.split('@')[0],
-      avatar_url: null,
-    };
-    
-    currentUser = user;
-    localStorage.setItem('came-user', JSON.stringify(user));
-    
-    return user;
+// Sign in
+export const signIn = async (email: string, password: string): Promise<User> => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    console.error('Error signing in:', error);
+    throw error;
   }
-  
-  throw new Error('Invalid login credentials');
+
+  if (!data.user) {
+    throw new Error('No user data returned');
+  }
+
+  // Get user profile from users table
+  const { data: userData, error: profileError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', data.user.id)
+    .single();
+
+  if (profileError) {
+    console.error('Error fetching user profile:', profileError);
+    throw profileError;
+  }
+
+  return {
+    id: data.user.id,
+    email: data.user.email!,
+    name: userData.name,
+    avatar_url: userData.avatar_url,
+  };
 };
 
-// Logout
-const logout = async (): Promise<void> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // In a real app, this would call Supabase auth.signOut
-  currentUser = null;
-  localStorage.removeItem('came-user');
+// Sign out
+export const signOut = async (): Promise<void> => {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    console.error('Error signing out:', error);
+    throw error;
+  }
 };
 
 // Reset password
-const resetPassword = async (email: string): Promise<void> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // In a real app, this would call Supabase auth.resetPasswordForEmail
-  console.log(`Password reset email sent to ${email}`);
+export const resetPassword = async (email: string): Promise<void> => {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+
+  if (error) {
+    console.error('Error resetting password:', error);
+    throw error;
+  }
+};
+
+// Get current user
+export const getCurrentUser = async (): Promise<User | null> => {
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error || !data.user) {
+    return null;
+  }
+
+  // Get user profile from users table
+  const { data: userData, error: profileError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', data.user.id)
+    .maybeSingle();
+
+  if (profileError || !userData) {
+    console.error('Error fetching user profile:', profileError);
+    return null;
+  }
+
+  return {
+    id: data.user.id,
+    email: data.user.email!,
+    name: userData.name,
+    avatar_url: userData.avatar_url,
+  };
 };
 
 // Update user profile
-const updateProfile = async (data: Partial<User>): Promise<User> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // In a real app, this would update the user profile in Supabase
-  if (!currentUser) {
-    throw new Error('User not authenticated');
+export const updateUserProfile = async (userId: string, updates: Partial<User>): Promise<User> => {
+  // Update user profile in users table
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
   }
-  
-  const updatedUser = { ...currentUser, ...data };
-  currentUser = updatedUser;
-  localStorage.setItem('came-user', JSON.stringify(updatedUser));
-  
-  return updatedUser;
+
+  return data;
 };
 
-const authService = {
-  checkExistingSession,
-  register,
-  login,
-  logout,
-  resetPassword,
-  updateProfile,
+// Update user avatar
+export const updateUserAvatar = async (userId: string, file: File): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const filePath = `avatars/${userId}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file, { upsert: true });
+
+  if (uploadError) {
+    console.error('Error uploading avatar:', uploadError);
+    throw uploadError;
+  }
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+  
+  // Update user profile with new avatar URL
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ avatar_url: data.publicUrl })
+    .eq('id', userId);
+
+  if (updateError) {
+    console.error('Error updating avatar URL:', updateError);
+    throw updateError;
+  }
+
+  return data.publicUrl;
 };
 
-export default authService;
+// Check and refresh session
+export const checkSession = async (): Promise<void> => {
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    console.error('Error checking session:', error);
+    throw error;
+  }
+
+  if (data.session) {
+    // Session exists, refresh it
+    await supabase.auth.refreshSession();
+  }
+};

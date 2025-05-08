@@ -3,40 +3,36 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductCard from '@/components/ProductCard';
 import ProductDialog from '@/components/ProductDialog';
-import { getProducts, getCategories, Product } from '@/services/productService';
+import { getProducts, getCategories, Product, Category } from '@/services/productService';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 const Menu = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | 'all'>('all');
   
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const [productsData, categoriesData] = await Promise.all([
-          getProducts(),
-          getCategories()
-        ]);
-        
-        setProducts(productsData);
-        setCategories(categoriesData);
-        setActiveCategory(categoriesData[0] || null);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, []);
+  // Fetch products using React Query
+  const { 
+    data: products = [], 
+    isLoading: isLoadingProducts,
+    error: productsError
+  } = useQuery({
+    queryKey: ['products'],
+    queryFn: getProducts
+  });
+  
+  // Fetch categories using React Query
+  const { 
+    data: categories = [], 
+    isLoading: isLoadingCategories,
+    error: categoriesError
+  } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories
+  });
   
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -49,13 +45,22 @@ const Menu = () => {
   
   // Filter products based on search term and active category
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (product.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesCategory = !activeCategory || product.category === activeCategory;
+    const matchesCategory = activeCategory === 'all' || product.category_id === activeCategory;
     
     return matchesSearch && matchesCategory;
   });
+  
+  // Group products by category
+  const productsByCategory = categories.reduce<Record<string, Product[]>>((acc, category) => {
+    acc[category.id] = filteredProducts.filter(product => product.category_id === category.id);
+    return acc;
+  }, {});
+  
+  // Add "All" products group
+  const allProductsGroup = { id: 'all', name: 'All Products', description: 'Browse all products' };
   
   return (
     <div className="py-8 came-container">
@@ -72,51 +77,98 @@ const Menu = () => {
         </div>
         
         <div className="flex overflow-x-auto space-x-2 w-full md:w-auto scrollbar-hide">
+          <button
+            onClick={() => setActiveCategory('all')}
+            className={`px-3 py-1.5 text-sm whitespace-nowrap rounded-md ${
+              activeCategory === 'all' 
+                ? 'bg-black text-white' 
+                : 'bg-gray-100 hover:bg-gray-200'
+            }`}
+          >
+            All
+          </button>
           {categories.map(category => (
             <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
               className={`px-3 py-1.5 text-sm whitespace-nowrap rounded-md ${
-                activeCategory === category 
+                activeCategory === category.id 
                   ? 'bg-black text-white' 
                   : 'bg-gray-100 hover:bg-gray-200'
               }`}
             >
-              {category}
+              {category.name}
             </button>
           ))}
         </div>
       </div>
 
-      {isLoading ? (
+      {(isLoadingProducts || isLoadingCategories) ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
         </div>
+      ) : (productsError || categoriesError) ? (
+        <div className="text-center py-12">
+          <h3 className="text-xl font-medium mb-2">Error loading menu</h3>
+          <p className="text-gray-600">Please try again later.</p>
+        </div>
       ) : (
         <div>
-          {categories.map(category => (
-            <div key={category} className={activeCategory === category ? 'block' : 'hidden'}>
-              <h2 className="text-3xl font-bold mono mb-6">{category}</h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {filteredProducts
-                  .filter(product => product.category === category)
-                  .map(product => (
-                    <ProductCard 
-                      key={product.id}
-                      id={product.id}
-                      name={product.name}
-                      description={product.description}
-                      image={product.image}
-                      price={product.base_price}
-                      category={product.category}
-                      onClick={() => handleProductClick(product)}
-                    />
-                  ))
-                }
-              </div>
+          {activeCategory === 'all' ? (
+            <>
+              {categories.map(category => (
+                <div key={category.id} className="mb-12">
+                  <h2 className="text-3xl font-bold mono mb-6">{category.name}</h2>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {filteredProducts
+                      .filter(product => product.category_id === category.id)
+                      .map(product => (
+                        <ProductCard 
+                          key={product.id}
+                          id={product.id}
+                          name={product.name}
+                          description={product.description || ''}
+                          image={product.image_url || '/placeholder.svg'}
+                          price={{ min: product.price_min, max: product.price_max }}
+                          category={category.name}
+                          onClick={() => handleProductClick(product)}
+                        />
+                      ))
+                    }
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div>
+              {categories
+                .filter(category => category.id === activeCategory)
+                .map(category => (
+                  <div key={category.id}>
+                    <h2 className="text-3xl font-bold mono mb-6">{category.name}</h2>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                      {filteredProducts
+                        .filter(product => product.category_id === category.id)
+                        .map(product => (
+                          <ProductCard 
+                            key={product.id}
+                            id={product.id}
+                            name={product.name}
+                            description={product.description || ''}
+                            image={product.image_url || '/placeholder.svg'}
+                            price={{ min: product.price_min, max: product.price_max }}
+                            category={category.name}
+                            onClick={() => handleProductClick(product)}
+                          />
+                        ))
+                      }
+                    </div>
+                  </div>
+                ))}
             </div>
-          ))}
+          )}
           
           {filteredProducts.length === 0 && (
             <div className="text-center py-12">
