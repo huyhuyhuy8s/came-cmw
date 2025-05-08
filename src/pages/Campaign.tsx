@@ -3,7 +3,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-import { getCampaignById } from '@/services/campaignService';
+import { getCampaignById, Campaign as CampaignType } from '@/services/campaignService';
 import { CalendarDays } from 'lucide-react';
 
 const Campaign = () => {
@@ -41,8 +41,14 @@ const Campaign = () => {
     );
   }
   
-  const startDate = new Date(campaign.start_date).toLocaleDateString();
-  const endDate = new Date(campaign.end_date).toLocaleDateString();
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })
+      .format(price)
+      .replace('₫', 'VND');
+  };
+  
+  const startDate = new Date(campaign.start_date).toLocaleDateString('vi-VN');
+  const endDate = new Date(campaign.end_date).toLocaleDateString('vi-VN');
   const isActive = new Date() <= new Date(campaign.end_date) && campaign.is_active;
   
   return (
@@ -62,11 +68,11 @@ const Campaign = () => {
         
         <div className="flex items-center gap-2 text-gray-600 mb-6">
           <CalendarDays size={20} />
-          <span>Valid from {startDate} to {endDate}</span>
+          <span>Có giá trị từ {startDate} đến {endDate}</span>
           {isActive ? (
-            <span className="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active</span>
+            <span className="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Đang hoạt động</span>
           ) : (
-            <span className="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Expired</span>
+            <span className="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Đã hết hạn</span>
           )}
         </div>
         
@@ -77,7 +83,7 @@ const Campaign = () => {
         <div className="mt-8">
           <Link to="/menu">
             <Button className="bg-black hover:bg-gray-800">
-              Order Now
+              Đặt hàng ngay
             </Button>
           </Link>
         </div>

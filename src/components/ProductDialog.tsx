@@ -28,6 +28,13 @@ interface ProductDialogProps {
   onClose: () => void;
 }
 
+// Function to format price in VND
+const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })
+    .format(price)
+    .replace('₫', 'VND');
+};
+
 const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose }) => {
   const { toast } = useToast();
   const { addItem } = useCart();
@@ -59,12 +66,24 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
   useEffect(() => {
     if (open && product) {
       setQuantity(1);
-      setSelectedOption(null);
-      setSelectedOptionObj(null);
-      setSelectedSize(null);
-      setSelectedSizeObj(null);
+      
+      // Set default option to "ít đá" if available
+      const defaultOption = options.find(o => o.value === "ít đá");
+      if (defaultOption) {
+        setSelectedOption(defaultOption.id);
+      } else {
+        setSelectedOption(null);
+      }
+      
+      // Set default size to "Nhỏ" if available
+      const defaultSize = sizes.find(s => s.value === "Nhỏ");
+      if (defaultSize) {
+        setSelectedSize(defaultSize.id);
+      } else {
+        setSelectedSize(null);
+      }
     }
-  }, [open, product]);
+  }, [open, product, options, sizes]);
   
   // Update selected option and size objects when selections change
   useEffect(() => {
@@ -86,7 +105,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
   if (!product) return null;
   
   const optionAdjustment = selectedOptionObj?.price_adjustment || 0;
-  const basePrice = selectedSizeObj ? selectedSizeObj.price : product.price_min;
+  const basePrice = selectedSizeObj ? selectedSizeObj.price : Number(product.price_min || 0);
   const totalPrice = (basePrice + optionAdjustment) * quantity;
   
   const handleAddToCart = () => {
@@ -175,7 +194,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
           
           <div className="flex justify-between items-center">
             <span className="font-mono">
-              {totalPrice.toFixed(2)} US$
+              {formatPrice(totalPrice)}
             </span>
             
             <div className="flex items-center space-x-2">
@@ -214,7 +233,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
                     <SelectContent>
                       {options.map(option => (
                         <SelectItem key={option.id} value={option.id}>
-                          {option.label} {option.price_adjustment > 0 && `(+$${option.price_adjustment.toFixed(2)})`}
+                          {option.label} {option.price_adjustment > 0 && `(+${formatPrice(option.price_adjustment)})`}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -232,7 +251,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
                     <SelectContent>
                       {sizes.map(size => (
                         <SelectItem key={size.id} value={size.id}>
-                          {size.label} (${size.price.toFixed(2)})
+                          {size.label} ({formatPrice(size.price)})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -255,7 +274,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
                 <span>Adding...</span>
               </div>
             ) : (
-              `Add to cart $${totalPrice.toFixed(2)}`
+              `Add to cart ${formatPrice(totalPrice)}`
             )}
           </Button>
         </DialogFooter>

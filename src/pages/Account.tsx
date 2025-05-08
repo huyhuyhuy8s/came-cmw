@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,14 +9,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { LogOut, Save, User } from 'lucide-react';
+import OrderHistory from '@/components/OrderHistory';
+import SupportTicketHistory from '@/components/SupportTicketHistory';
 
 const Account = () => {
   const { user, logout, updateProfile, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Use name as username or empty string if not available
-  const [username, setUsername] = useState(user?.name || '');
+  // Use name instead of username
+  const [name, setName] = useState(user?.name || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -48,7 +51,7 @@ const Account = () => {
     
     try {
       // Pass name instead of username in the update
-      await updateProfile({ name: username, avatar_url: avatarUrl });
+      await updateProfile({ name, avatar_url: avatarUrl });
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
@@ -135,7 +138,7 @@ const Account = () => {
   
   return (
     <div className="py-12 came-container">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold mono">My Account</h1>
           <Button 
@@ -164,20 +167,22 @@ const Account = () => {
         </div>
         
         <Tabs defaultValue="profile">
-          <TabsList className="grid grid-cols-2 mb-8">
+          <TabsList className="grid grid-cols-4 mb-8">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="support">Support</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile">
             <form onSubmit={handleProfileUpdate} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="name">Name</Label>
                 <Input
-                  id="username"
-                  placeholder="Your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="name"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
               </div>
               
@@ -257,6 +262,14 @@ const Account = () => {
                 {isPasswordSubmitting ? 'Updating...' : 'Update Password'}
               </Button>
             </form>
+          </TabsContent>
+          
+          <TabsContent value="orders">
+            <OrderHistory />
+          </TabsContent>
+          
+          <TabsContent value="support">
+            <SupportTicketHistory />
           </TabsContent>
         </Tabs>
       </div>
