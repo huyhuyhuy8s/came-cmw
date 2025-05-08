@@ -4,6 +4,7 @@ import * as authService from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import { User } from '@/services/authService';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextProps {
   user: User | null;
@@ -22,6 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Set up auth state listener first
@@ -75,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: 'Login successful',
         description: `Welcome back, ${user.name || user.email}!`,
       });
+      navigate('/');
     } catch (error: any) {
       toast({
         title: 'Login failed',
@@ -96,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: 'Registration successful',
         description: `Welcome to Came, ${username || email}!`,
       });
+      navigate('/');
     } catch (error: any) {
       toast({
         title: 'Registration failed',

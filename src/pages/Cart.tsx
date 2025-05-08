@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -40,6 +39,13 @@ const Cart = () => {
     '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM',
     '05:00 PM', '05:30 PM', '06:00 PM'
   ];
+  
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(price);
+  };
   
   const handlePlaceOrder = async () => {
     if (!isAuthenticated) {
@@ -95,7 +101,7 @@ const Cart = () => {
       // Calculate totals
       const subtotal = getCartTotal();
       const tax = subtotal * 0.1;
-      const deliveryFee = orderType === 'delivery' ? 5 : 0;
+      const deliveryFee = orderType === 'delivery' ? 5000 : 0;
       const total = subtotal + tax + deliveryFee;
       
       // Create order
@@ -141,12 +147,14 @@ const Cart = () => {
       
       // Show success message
       toast({
-        title: "Order Placed!",
-        description: `Your ${orderType} order has been placed successfully.`,
+        title: "Order Created!",
+        description: `Proceed to payment.`,
       });
       
-      // Redirect to success page or orders page
-      navigate('/account');
+      // Redirect to payment page instead of account
+      navigate('/payment', { 
+        state: { orderDetails: order }
+      });
       
     } catch (error) {
       console.error("Error placing order:", error);
@@ -206,7 +214,7 @@ const Cart = () => {
                 <div className="flex-grow">
                   <div className="flex justify-between">
                     <h3 className="font-medium">{item.name}</h3>
-                    <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="font-mono">{formatPrice(item.price * item.quantity)}</p>
                   </div>
                   
                   {item.options && item.options.length > 0 && (
@@ -265,18 +273,18 @@ const Cart = () => {
             <div className="space-y-3 mb-6">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-mono">${getCartTotal().toFixed(2)}</span>
+                <span className="font-mono">{formatPrice(getCartTotal())}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Tax</span>
-                <span className="font-mono">${(getCartTotal() * 0.1).toFixed(2)}</span>
+                <span className="font-mono">{formatPrice(getCartTotal() * 0.1)}</span>
               </div>
               
               {orderType === 'delivery' && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Delivery Fee</span>
-                  <span className="font-mono">$5.00</span>
+                  <span className="font-mono">{formatPrice(5000)}</span>
                 </div>
               )}
               
@@ -285,7 +293,7 @@ const Cart = () => {
               <div className="flex justify-between font-medium">
                 <span>Total</span>
                 <span className="font-mono">
-                  ${(getCartTotal() * 1.1 + (orderType === 'delivery' ? 5 : 0)).toFixed(2)}
+                  {formatPrice(getCartTotal() * 1.1 + (orderType === 'delivery' ? 5000 : 0))}
                 </span>
               </div>
             </div>
@@ -378,7 +386,7 @@ const Cart = () => {
                   <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
                   <span>Processing...</span>
                 </div>
-              ) : isAuthenticated ? 'Place Order' : 'Sign In to Order'}
+              ) : isAuthenticated ? 'Proceed to Payment' : 'Sign In to Order'}
             </Button>
             
             {!isAuthenticated && (

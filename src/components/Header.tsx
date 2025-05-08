@@ -6,10 +6,12 @@ import { ShoppingCart, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CartCounter from './CartCounter';
 import MobileMenu from './MobileMenu';
+import { useAuth } from '@/hooks/useAuth';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, user } = useAuth();
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -51,9 +53,11 @@ const Header: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <Link to="/signin" className="hidden md:block text-sm hover:underline">
-            Sign In
-          </Link>
+          {!isAuthenticated && (
+            <Link to="/signin" className="hidden md:block text-sm hover:underline">
+              Sign In
+            </Link>
+          )}
           <Link to="/cart" className="relative">
             <ShoppingCart className="h-5 w-5" />
             <CartCounter />

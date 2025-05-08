@@ -11,6 +11,8 @@ import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
 import ForgotPassword from "@/pages/ForgotPassword";
 import Cart from "@/pages/Cart";
+import Payment from "@/pages/Payment";
+import OrderTracking from "@/pages/OrderTracking";
 import Account from "@/pages/Account";
 import Support from "@/pages/Support";
 import Campaign from "@/pages/Campaign";
@@ -18,6 +20,7 @@ import Layout from "@/components/Layout";
 import NotFound from "@/pages/NotFound";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
+import SupportButton from "@/components/SupportButton";
 
 const queryClient = new QueryClient();
 
@@ -36,12 +39,15 @@ const App = () => (
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/cart" element={<Cart />} />
+                <Route path="/payment" element={<Payment />} />
+                <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/support" element={<Support />} />
                 <Route path="/campaign/:id" element={<Campaign />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
+            <SupportButton />
           </BrowserRouter>
           <Toaster />
           <Sonner />
