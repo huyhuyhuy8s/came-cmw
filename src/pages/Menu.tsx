@@ -132,7 +132,7 @@ const Menu = () => {
                       .map(product => (
                         <ProductCard 
                           key={product.id}
-                          id={product.id}
+                          id={parseInt(product.id)}
                           name={product.name}
                           description={product.description || ''}
                           image={product.image_url || '/placeholder.svg'}
@@ -163,7 +163,7 @@ const Menu = () => {
                         .map(product => (
                           <ProductCard 
                             key={product.id}
-                            id={product.id}
+                            id={parseInt(product.id)}
                             name={product.name}
                             description={product.description || ''}
                             image={product.image_url || '/placeholder.svg'}
