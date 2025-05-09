@@ -23,15 +23,15 @@ const Header: React.FC = () => {
         <div className="hidden md:flex items-center space-x-8">
           <Link to="/" className={cn("text-sm font-medium hover:text-gray-700 transition-colors", 
             isActive('/') ? 'font-bold' : '')}>
-            Trang chủ
+            Home
           </Link>
           <Link to="/menu" className={cn("text-sm font-medium hover:text-gray-700 transition-colors",
             isActive('/menu') ? 'font-bold' : '')}>
-            Thực đơn
+            Menu
           </Link>
           <Link to="/about" className={cn("text-sm font-medium hover:text-gray-700 transition-colors",
             isActive('/about') ? 'font-bold' : '')}>
-            Giới thiệu
+            About
           </Link>
         </div>
 
@@ -55,7 +55,7 @@ const Header: React.FC = () => {
         <div className="flex items-center space-x-4">
           {!isAuthenticated && (
             <Link to="/signin" className="hidden md:block text-sm hover:underline">
-              Đăng nhập
+              Sign In
             </Link>
           )}
           <Link to="/cart" className="relative">

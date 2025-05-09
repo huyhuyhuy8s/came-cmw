@@ -71,16 +71,26 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
       const defaultOption = options.find(o => o.value === "ít đá");
       if (defaultOption) {
         setSelectedOption(defaultOption.id);
+        setSelectedOptionObj(defaultOption);
+      } else if (options.length > 0) {
+        setSelectedOption(options[0].id);
+        setSelectedOptionObj(options[0]);
       } else {
         setSelectedOption(null);
+        setSelectedOptionObj(null);
       }
       
       // Set default size to "Nhỏ" if available
       const defaultSize = sizes.find(s => s.value === "Nhỏ");
       if (defaultSize) {
         setSelectedSize(defaultSize.id);
+        setSelectedSizeObj(defaultSize);
+      } else if (sizes.length > 0) {
+        setSelectedSize(sizes[0].id);
+        setSelectedSizeObj(sizes[0]);
       } else {
         setSelectedSize(null);
+        setSelectedSizeObj(null);
       }
     }
   }, [open, product, options, sizes]);
@@ -104,9 +114,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
   
   if (!product) return null;
   
+  // Calculate prices correctly
   const optionAdjustment = selectedOptionObj?.price_adjustment || 0;
-  const basePrice = selectedSizeObj ? selectedSizeObj.price : Number(product.price_min || 0);
-  const totalPrice = (basePrice + optionAdjustment) * quantity;
+  const basePrice = Number(product.price_min || 0);
+  const sizePrice = selectedSizeObj?.price || 0;
+  const totalUnitPrice = basePrice + optionAdjustment;
+  const totalPrice = totalUnitPrice * quantity;
   
   const handleAddToCart = () => {
     // Validate that option and size are selected if available
@@ -132,11 +145,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
     
     try {
       const selectedOptions = selectedOptionObj ? [selectedOptionObj.value] : [];
+      const finalPrice = basePrice + optionAdjustment + (selectedSizeObj?.price || 0);
       
       addItem({
         product_id: product.id,
         name: product.name,
-        price: basePrice + optionAdjustment,
+        price: finalPrice,
         image: product.image_url || '/placeholder.svg',
         quantity: quantity,
         options: selectedOptions,
@@ -173,6 +187,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
     setQuantity(quantity + 1);
   };
   
+  // Calculate display price that includes base price + size price + option adjustment
+  const displayPrice = basePrice + (selectedSizeObj?.price || 0) + optionAdjustment;
+  const displayTotalPrice = displayPrice * quantity;
+  
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -194,7 +212,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
           
           <div className="flex justify-between items-center">
             <span className="font-mono">
-              {formatPrice(totalPrice)}
+              {formatPrice(displayTotalPrice)}
             </span>
             
             <div className="flex items-center space-x-2">
@@ -274,7 +292,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
                 <span>Adding...</span>
               </div>
             ) : (
-              `Add to cart ${formatPrice(totalPrice)}`
+              `Add to cart ${formatPrice(displayTotalPrice)}`
             )}
           </Button>
         </DialogFooter>

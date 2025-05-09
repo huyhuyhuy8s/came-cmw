@@ -27,11 +27,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const formatPrice = () => {
     if (!price) return '';
     
+    const formatter = new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    });
+    
     if (typeof price === 'number') {
-      return `${price.toFixed(2)} US$`;
+      return formatter.format(price).replace('₫', 'VND');
     }
     
-    return `${price.min.toFixed(2)} US$ - ${price.max.toFixed(2)} US$`;
+    return `${formatter.format(price.min).replace('₫', 'VND')}${price.max > price.min ? ` - ${formatter.format(price.max).replace('₫', 'VND')}` : ''}`;
   };
   
   return (

@@ -62,6 +62,12 @@ const Menu = () => {
   // Add "All" products group
   const allProductsGroup = { id: 'all', name: 'All Products', description: 'Browse all products' };
   
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })
+      .format(price)
+      .replace('₫', 'VND');
+  };
+  
   return (
     <div className="py-8 came-container">
       {/* Search and Category Filter */}
@@ -131,8 +137,8 @@ const Menu = () => {
                           description={product.description || ''}
                           image={product.image_url || '/placeholder.svg'}
                           price={{ 
-                            min: Number(product.price_min || 0), 
-                            max: Number(product.price_max || 0) 
+                            min: Number(product.price_min), 
+                            max: Number(product.price_max) 
                           }}
                           category={category.name}
                           onClick={() => handleProductClick(product)}
@@ -162,8 +168,8 @@ const Menu = () => {
                             description={product.description || ''}
                             image={product.image_url || '/placeholder.svg'}
                             price={{ 
-                              min: Number(product.price_min || 0), 
-                              max: Number(product.price_max || 0) 
+                              min: Number(product.price_min), 
+                              max: Number(product.price_max) 
                             }}
                             category={category.name}
                             onClick={() => handleProductClick(product)}

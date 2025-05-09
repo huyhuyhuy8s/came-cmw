@@ -68,11 +68,11 @@ const Campaign = () => {
         
         <div className="flex items-center gap-2 text-gray-600 mb-6">
           <CalendarDays size={20} />
-          <span>Có giá trị từ {startDate} đến {endDate}</span>
+          <span>Valid from {startDate} to {endDate}</span>
           {isActive ? (
-            <span className="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Đang hoạt động</span>
+            <span className="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active</span>
           ) : (
-            <span className="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Đã hết hạn</span>
+            <span className="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Expired</span>
           )}
         </div>
         
@@ -83,7 +83,7 @@ const Campaign = () => {
         <div className="mt-8">
           <Link to="/menu">
             <Button className="bg-black hover:bg-gray-800">
-              Đặt hàng ngay
+              Order Now
             </Button>
           </Link>
         </div>

@@ -15,6 +15,13 @@ const Index = () => {
     queryFn: getActiveCampaigns
   });
 
+  // Format price in VND
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })
+      .format(price)
+      .replace('₫', 'VND');
+  };
+
   return (
     <div className="home-page">
       {/* Hero Section */}
@@ -58,6 +65,7 @@ const Index = () => {
             <div className="p-4">
               <h3 className="font-medium text-lg">Signature Blend</h3>
               <p className="text-gray-600 text-sm mt-2">Our house specialty with notes of chocolate and caramel</p>
+              <p className="text-sm font-medium mt-2">{formatPrice(25000)}</p>
             </div>
           </div>
           <div className="bg-white rounded-lg overflow-hidden shadow-sm border">
@@ -69,6 +77,7 @@ const Index = () => {
             <div className="p-4">
               <h3 className="font-medium text-lg">Artisanal Latte</h3>
               <p className="text-gray-600 text-sm mt-2">Smooth espresso with expertly steamed milk and intricate latte art</p>
+              <p className="text-sm font-medium mt-2">{formatPrice(30000)}</p>
             </div>
           </div>
           <div className="bg-white rounded-lg overflow-hidden shadow-sm border">
@@ -80,6 +89,7 @@ const Index = () => {
             <div className="p-4">
               <h3 className="font-medium text-lg">Cold Brew</h3>
               <p className="text-gray-600 text-sm mt-2">Steeped for 12 hours for a smooth, refreshing experience</p>
+              <p className="text-sm font-medium mt-2">{formatPrice(35000)}</p>
             </div>
           </div>
         </div>
@@ -114,7 +124,7 @@ const Index = () => {
                       <h3 className="font-medium text-lg">{campaign.title}</h3>
                       <p className="text-gray-600 text-sm mt-2 line-clamp-2">{campaign.description}</p>
                       <p className="text-sm text-gray-500 mt-2">
-                        Valid until {new Date(campaign.end_date).toLocaleDateString()}
+                        Valid until {new Date(campaign.end_date).toLocaleDateString('vi-VN')}
                       </p>
                     </div>
                   </div>
@@ -126,7 +136,6 @@ const Index = () => {
               <p className="text-gray-600">No active promotions at this time. Check back soon for new offers!</p>
             </div>
           )}
-          
         </div>
       </section>
 
