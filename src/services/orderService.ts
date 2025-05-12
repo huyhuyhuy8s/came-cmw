@@ -130,20 +130,3 @@ export const updateOrderStatus = async (orderId: string, status: string): Promis
 
   return data;
 };
-
-// Cancel order
-export const cancelOrder = async (orderId: string): Promise<Order> => {
-  const { data, error } = await supabase
-    .from('orders')
-    .update({ status: 'cancelled' })
-    .eq('id', orderId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error cancelling order:', error);
-    throw error;
-  }
-
-  return data;
-};

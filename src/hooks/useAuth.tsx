@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as authService from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
@@ -101,11 +100,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       navigate('/');
     } catch (error: any) {
+      const errorMessage = error.message || 'Could not create account';
       toast({
         title: 'Registration failed',
-        description: error.message || 'Could not create account',
+        description: errorMessage,
         variant: 'destructive',
       });
+      console.error('Registration error details:', error);
       throw error;
     } finally {
       setIsLoading(false);
