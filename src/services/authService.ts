@@ -31,13 +31,15 @@ export const signUp = async (email: string, password: string, name: string): Pro
   }
 
   try {
-    // Create user profile in the users table
+    // Create user profile in the users table with a dummy password (we don't store actual passwords here)
+    // The actual password is stored in the auth schema by Supabase, not in our users table
     const { error: profileError } = await supabase
       .from('users')
       .insert({
         id: data.user.id,
         email: data.user.email,
         name,
+        password: 'PLACEHOLDER_VALUE_NOT_USED' // Add placeholder for password field
       });
 
     if (profileError) {
@@ -94,6 +96,7 @@ export const signIn = async (email: string, password: string): Promise<User> => 
           id: data.user.id,
           email: data.user.email,
           name: data.user.user_metadata?.name || email.split('@')[0],
+          password: 'PLACEHOLDER_VALUE_NOT_USED' // Add placeholder for password field
         })
         .select()
         .single();

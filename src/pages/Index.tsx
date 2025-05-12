@@ -44,7 +44,7 @@ const Index = () => {
           </div>
           <div className="relative h-64 md:h-96 overflow-hidden rounded-lg">
             <img 
-              src="/lovable-uploads/a944091e-cc01-482f-877c-c3b474d20013.png" 
+              src="/menu_cover_image/hero-image.png" 
               alt="Delicious coffee" 
               className="w-full h-full object-cover"
             />
@@ -58,7 +58,7 @@ const Index = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-lg overflow-hidden shadow-sm border">
             <img 
-              src="/lovable-uploads/624d2ca0-4248-41b4-80b9-aa0cfee9eb6d.png"
+              src="/our_specialty_coffee/signature-blend.png"
               alt="Coffee" 
               className="w-full h-48 object-cover"
             />
@@ -70,7 +70,7 @@ const Index = () => {
           </div>
           <div className="bg-white rounded-lg overflow-hidden shadow-sm border">
             <img 
-              src="/lovable-uploads/a944091e-cc01-482f-877c-c3b474d20013.png" 
+              src="/our_specialty_coffee/artisanal-latte.png" 
               alt="Latte" 
               className="w-full h-48 object-cover"
             />
@@ -82,7 +82,7 @@ const Index = () => {
           </div>
           <div className="bg-white rounded-lg overflow-hidden shadow-sm border">
             <img 
-              src="/lovable-uploads/b571cd5f-7223-4d8c-8d16-bfb5bdeef89d.png" 
+              src="/our_specialty_coffee/cold-brew.png" 
               alt="Iced Coffee" 
               className="w-full h-48 object-cover"
             />
@@ -145,7 +145,13 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center mb-4">
-              <div className="w-12 h-12 rounded-full bg-gray-200 mr-4"></div>
+              <div className="w-12 h-12 rounded-full bg-gray-200 mr-4">
+                <img 
+                  src="/customer_menu_avatar/alex-johnson.png" 
+                  alt="Alex Johnson"
+                  className="w-full h-full rounded-full object-cover"
+                />
+              </div>
               <div>
                 <h4 className="font-medium">Alex Johnson</h4>
                 <p className="text-sm text-gray-500">Coffee Enthusiast</p>
@@ -155,7 +161,13 @@ const Index = () => {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center mb-4">
-              <div className="w-12 h-12 rounded-full bg-gray-200 mr-4"></div>
+              <div className="w-12 h-12 rounded-full bg-gray-200 mr-4">
+                <img 
+                  src="/customer_menu_avatar/sarah-williams.png" 
+                  alt="Sarah Williams"
+                  className="w-full h-full rounded-full object-cover"
+                />
+              </div>
               <div>
                 <h4 className="font-medium">Sarah Williams</h4>
                 <p className="text-sm text-gray-500">Food Blogger</p>
@@ -165,7 +177,13 @@ const Index = () => {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center mb-4">
-              <div className="w-12 h-12 rounded-full bg-gray-200 mr-4"></div>
+              <div className="w-12 h-12 rounded-full bg-gray-200 mr-4">
+                <img 
+                  src="/customer_menu_avatar/michael-chen.png" 
+                  alt="Michael Chen"
+                  className="w-full h-full rounded-full object-cover"
+                />
+              </div>
               <div>
                 <h4 className="font-medium">Michael Chen</h4>
                 <p className="text-sm text-gray-500">Regular Customer</p>
