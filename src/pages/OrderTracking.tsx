@@ -3,10 +3,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, Clock, Truck, Package, Coffee } from 'lucide-react';
+import { CheckCircle, Clock, Truck, Package, Coffee, X } from 'lucide-react';
 import * as orderService from '@/services/orderService';
 import { Order, OrderItem } from '@/services/orderService';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const statusSteps = [
   { status: 'pending', icon: Clock, label: 'Order Placed' },
@@ -16,44 +24,49 @@ const statusSteps = [
   { status: 'completed', icon: CheckCircle, label: 'Delivered' }
 ];
 
+// Status where cancellation is allowed
+const CANCELLABLE_STATUSES = ['pending', 'preparing', 'packing'];
+
 const OrderTracking = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const { toast } = useToast();
   
-  useEffect(() => {
-    const fetchOrderDetails = async () => {
-      if (!orderId) return;
+  const fetchOrderDetails = async () => {
+    if (!orderId) return;
+    
+    try {
+      setIsLoading(true);
+      const orderData = await orderService.getOrderById(orderId);
       
-      try {
-        setIsLoading(true);
-        const orderData = await orderService.getOrderById(orderId);
-        
-        if (orderData) {
-          setOrder(orderData);
-          const items = await orderService.getOrderItems(orderId);
-          setOrderItems(items);
-        } else {
-          toast({
-            title: "Order not found",
-            description: "We couldn't find the order you're looking for",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching order:', error);
+      if (orderData) {
+        setOrder(orderData);
+        const items = await orderService.getOrderItems(orderId);
+        setOrderItems(items);
+      } else {
         toast({
-          title: "Error",
-          description: "There was a problem loading your order",
+          title: "Order not found",
+          description: "We couldn't find the order you're looking for",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error fetching order:', error);
+      toast({
+        title: "Error",
+        description: "There was a problem loading your order",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchOrderDetails();
     
     // Refresh order status every 30 seconds
@@ -73,6 +86,36 @@ const OrderTracking = () => {
       currency: 'VND'
     }).format(price);
   };
+  
+  const handleCancelOrder = async () => {
+    if (!orderId) return;
+    
+    try {
+      setIsCancelling(true);
+      await orderService.cancelOrder(orderId);
+      
+      // Update the local state after cancellation
+      setOrder(prev => prev ? { ...prev, status: 'cancelled' } : null);
+      
+      toast({
+        title: "Order cancelled",
+        description: "Your order has been successfully cancelled",
+      });
+      
+      setCancelDialogOpen(false);
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast({
+        title: "Error",
+        description: "There was a problem cancelling your order",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+  
+  const canCancel = order && CANCELLABLE_STATUSES.includes(order.status);
   
   if (isLoading) {
     return (
@@ -106,8 +149,26 @@ const OrderTracking = () => {
         </Link>
       </div>
       
-      <h1 className="text-3xl font-bold mono mb-2">Order Status</h1>
-      <p className="text-gray-600 mb-8">Order #{orderId?.substring(0, 8)}</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold mono mb-2">Order Status</h1>
+          <p className="text-gray-600">Order #{orderId?.substring(0, 8)}</p>
+        </div>
+        {canCancel && (
+          <Button 
+            variant="destructive" 
+            onClick={() => setCancelDialogOpen(true)}
+            className="ml-4"
+          >
+            <X size={16} className="mr-1" /> Cancel Order
+          </Button>
+        )}
+        {order.status === 'cancelled' && (
+          <div className="px-4 py-2 bg-red-100 text-red-800 rounded-md">
+            <p className="font-medium">Order Cancelled</p>
+          </div>
+        )}
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
@@ -121,8 +182,13 @@ const OrderTracking = () => {
               {/* Status steps */}
               <div className="space-y-8">
                 {statusSteps.map((step, index) => {
-                  const isPast = index <= currentStep;
-                  const isCurrent = index === currentStep;
+                  // For cancelled orders, we only show the first step as completed
+                  const isPast = order.status === 'cancelled' 
+                    ? index === 0 
+                    : index <= currentStep;
+                  const isCurrent = order.status === 'cancelled' 
+                    ? index === 0
+                    : index === currentStep;
                   
                   return (
                     <div key={step.status} className="relative flex items-start pl-12">
@@ -135,13 +201,18 @@ const OrderTracking = () => {
                         <h3 className={`font-medium ${isCurrent ? 'text-black' : 'text-gray-700'}`}>
                           {step.label}
                         </h3>
-                        {isCurrent && (
+                        {isCurrent && order.status !== 'cancelled' && (
                           <p className="text-sm text-gray-600 mt-1">
                             {step.status === 'pending' && 'We have received your order.'}
                             {step.status === 'preparing' && 'We are preparing your order.'}
                             {step.status === 'packing' && 'Your order is being packed.'}
                             {step.status === 'delivering' && 'Your order is on the way.'}
                             {step.status === 'completed' && 'Your order has been delivered.'}
+                          </p>
+                        )}
+                        {order.status === 'cancelled' && index === 0 && (
+                          <p className="text-sm text-red-600 mt-1">
+                            Your order has been cancelled.
                           </p>
                         )}
                       </div>
@@ -233,6 +304,34 @@ const OrderTracking = () => {
           </div>
         </div>
       </div>
+
+      {/* Cancel Order Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Order</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this order? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setCancelDialogOpen(false)}
+              disabled={isCancelling}
+            >
+              Keep Order
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleCancelOrder}
+              disabled={isCancelling}
+            >
+              {isCancelling ? "Cancelling..." : "Yes, Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
