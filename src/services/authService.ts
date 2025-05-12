@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface User {
@@ -38,6 +39,7 @@ export const signUp = async (email: string, password: string, name: string): Pro
         id: data.user.id,
         email: data.user.email,
         name,
+        password: 'auth-managed' // Password is required by the users table schema
       });
 
     if (profileError) {
@@ -94,6 +96,7 @@ export const signIn = async (email: string, password: string): Promise<User> => 
           id: data.user.id,
           email: data.user.email,
           name: data.user.user_metadata?.name || email.split('@')[0],
+          password: 'auth-managed' // Password is required by the users table schema
         })
         .select()
         .single();

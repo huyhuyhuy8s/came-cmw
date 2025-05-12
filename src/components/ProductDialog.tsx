@@ -21,12 +21,30 @@ import {
 import { useCart } from '@/hooks/useCart';
 import { Product, ProductOption, ProductSize, getProductOptions, getProductSizes } from '@/services/productService';
 import { useQuery } from '@tanstack/react-query';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Separator } from "@/components/ui/separator";
 
 interface ProductDialogProps {
   product: Product | null;
   open: boolean;
   onClose: () => void;
 }
+
+// Define option categories
+const OPTION_CATEGORIES = {
+  FLAVORS: 'flavors',
+  SUGAR: 'sugar',
+  ICE: 'ice'
+};
+
+// Map options to categories
+const flavorOptions = [
+  "Siro caramel", "Thêm shot espresso", "Siro chocolate", 
+  "Sữa hạnh nhân", "Sữa đậu nành", "Siro vanilla", "Kem tươi"
+];
+const sugarOptions = ["Ít đường", "Không đường"];
+const iceOptions = ["Không đá", "Ít đá"];
 
 // Function to format price in VND
 const formatPrice = (price: number): string => {
@@ -35,12 +53,23 @@ const formatPrice = (price: number): string => {
     .replace('₫', 'VND');
 };
 
+// Function to determine which category an option belongs to
+const getOptionCategory = (optionValue: string): string => {
+  if (flavorOptions.includes(optionValue)) return OPTION_CATEGORIES.FLAVORS;
+  if (sugarOptions.includes(optionValue)) return OPTION_CATEGORIES.SUGAR;
+  if (iceOptions.includes(optionValue)) return OPTION_CATEGORIES.ICE;
+  return OPTION_CATEGORIES.FLAVORS; // Default category
+};
+
 const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose }) => {
   const { toast } = useToast();
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [selectedOptionObj, setSelectedOptionObj] = useState<ProductOption | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, ProductOption | null>>({
+    [OPTION_CATEGORIES.FLAVORS]: null,
+    [OPTION_CATEGORIES.SUGAR]: null,
+    [OPTION_CATEGORIES.ICE]: null
+  });
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedSizeObj, setSelectedSizeObj] = useState<ProductSize | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -61,24 +90,41 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
     queryKey: ['product-sizes'],
     queryFn: getProductSizes
   });
+
+  // Organize options by category
+  const categorizedOptions = options.reduce<Record<string, ProductOption[]>>(
+    (acc, option) => {
+      const category = getOptionCategory(option.value);
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(option);
+      return acc;
+    },
+    {
+      [OPTION_CATEGORIES.FLAVORS]: [],
+      [OPTION_CATEGORIES.SUGAR]: [],
+      [OPTION_CATEGORIES.ICE]: []
+    }
+  );
   
   // Reset state when dialog opens/closes or product changes
   useEffect(() => {
     if (open && product) {
       setQuantity(1);
       
-      // Set default option to "ít đá" if available
-      const defaultOption = options.find(o => o.value === "ít đá");
-      if (defaultOption) {
-        setSelectedOption(defaultOption.id);
-        setSelectedOptionObj(defaultOption);
-      } else if (options.length > 0) {
-        setSelectedOption(options[0].id);
-        setSelectedOptionObj(options[0]);
-      } else {
-        setSelectedOption(null);
-        setSelectedOptionObj(null);
+      // Set default selections for each category
+      const defaultSelections = {
+        [OPTION_CATEGORIES.FLAVORS]: null,
+        [OPTION_CATEGORIES.SUGAR]: null,
+        [OPTION_CATEGORIES.ICE]: null
+      };
+
+      // Set default ice option to "ít đá" if available
+      const defaultIceOption = options.find(o => o.value === "ít đá");
+      if (defaultIceOption) {
+        defaultSelections[OPTION_CATEGORIES.ICE] = defaultIceOption;
       }
+
+      setSelectedOptions(defaultSelections);
       
       // Set default size to "Nhỏ" if available
       const defaultSize = sizes.find(s => s.value === "Nhỏ");
@@ -95,43 +141,35 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
     }
   }, [open, product, options, sizes]);
   
-  // Update selected option and size objects when selections change
+  // Update selected size object when selection changes
   useEffect(() => {
-    if (selectedOption) {
-      const option = options.find(o => o.id === selectedOption);
-      setSelectedOptionObj(option || null);
-    } else {
-      setSelectedOptionObj(null);
-    }
-    
     if (selectedSize) {
       const size = sizes.find(s => s.id === selectedSize);
       setSelectedSizeObj(size || null);
     } else {
       setSelectedSizeObj(null);
     }
-  }, [selectedOption, selectedSize, options, sizes]);
+  }, [selectedSize, sizes]);
   
   if (!product) return null;
   
   // Calculate prices correctly
-  const optionAdjustment = selectedOptionObj?.price_adjustment || 0;
+  const getOptionAdjustment = () => {
+    let total = 0;
+    Object.values(selectedOptions).forEach(option => {
+      if (option) total += option.price_adjustment || 0;
+    });
+    return total;
+  };
+
+  const optionAdjustment = getOptionAdjustment();
   const basePrice = Number(product.price_min || 0);
   const sizePrice = selectedSizeObj?.price || 0;
   const totalUnitPrice = basePrice + optionAdjustment;
   const totalPrice = totalUnitPrice * quantity;
   
   const handleAddToCart = () => {
-    // Validate that option and size are selected if available
-    if (options.length > 0 && !selectedOption) {
-      toast({
-        title: "Option Required",
-        description: "Please select an option before adding to cart",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+    // Validate that size is selected if available
     if (sizes.length > 0 && !selectedSize) {
       toast({
         title: "Size Required",
@@ -144,7 +182,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
     setIsAddingToCart(true);
     
     try {
-      const selectedOptions = selectedOptionObj ? [selectedOptionObj.value] : [];
+      // Collect selected options
+      const selectedOptionsValues = Object.values(selectedOptions)
+        .filter(Boolean)
+        .map(option => option!.value);
+      
       const finalPrice = basePrice + optionAdjustment + (selectedSizeObj?.price || 0);
       
       addItem({
@@ -153,9 +195,9 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
         price: finalPrice,
         image: product.image_url || '/placeholder.svg',
         quantity: quantity,
-        options: selectedOptions,
+        options: selectedOptionsValues,
         size: selectedSizeObj?.value,
-        selected_option_id: selectedOptionObj?.id,
+        selected_option_id: Object.values(selectedOptions).find(Boolean)?.id,
         selected_size_id: selectedSizeObj?.id,
       });
       
@@ -175,6 +217,14 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
     } finally {
       setIsAddingToCart(false);
     }
+  };
+  
+  const handleOptionChange = (category: string, optionId: string) => {
+    const option = options.find(o => o.id === optionId) || null;
+    setSelectedOptions(prev => ({
+      ...prev,
+      [category]: option
+    }));
   };
   
   const decrementQuantity = () => {
@@ -240,28 +290,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
               <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-black"></div>
             </div>
           ) : (
-            <>
-              {options.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Select an option (Required)</label>
-                  <Select value={selectedOption || ''} onValueChange={setSelectedOption}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select one" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {options.map(option => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label} {option.price_adjustment > 0 && `(+${formatPrice(option.price_adjustment)})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              
+            <div className="space-y-6">
+              {/* Size selection */}
               {sizes.length > 0 && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Select a size (Required)</label>
+                  <label className="text-sm font-medium">Select a size</label>
                   <Select value={selectedSize || ''} onValueChange={setSelectedSize}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select one" />
@@ -276,7 +309,138 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
                   </Select>
                 </div>
               )}
-            </>
+              
+              <Separator />
+              
+              {/* Flavor options */}
+              {categorizedOptions[OPTION_CATEGORIES.FLAVORS].length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select flavor (optional)</label>
+                  <RadioGroup 
+                    value={selectedOptions[OPTION_CATEGORIES.FLAVORS]?.id || ''} 
+                    onValueChange={(value) => handleOptionChange(OPTION_CATEGORIES.FLAVORS, value)}
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    <div className="col-span-2">
+                      <Label 
+                        htmlFor={`no-${OPTION_CATEGORIES.FLAVORS}`}
+                        className="flex items-center space-x-2 border p-2 rounded-md cursor-pointer hover:bg-gray-50"
+                      >
+                        <RadioGroupItem 
+                          value=""
+                          id={`no-${OPTION_CATEGORIES.FLAVORS}`}
+                        />
+                        <span>No flavor</span>
+                      </Label>
+                    </div>
+                    {categorizedOptions[OPTION_CATEGORIES.FLAVORS].map(option => (
+                      <Label 
+                        key={option.id}
+                        htmlFor={option.id}
+                        className="flex items-center space-x-2 border p-2 rounded-md cursor-pointer hover:bg-gray-50"
+                      >
+                        <RadioGroupItem 
+                          value={option.id} 
+                          id={option.id} 
+                        />
+                        <span>{option.label}</span>
+                        {option.price_adjustment > 0 && (
+                          <span className="text-xs text-gray-500">
+                            +{formatPrice(option.price_adjustment)}
+                          </span>
+                        )}
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                </div>
+              )}
+              
+              {/* Sugar options */}
+              {categorizedOptions[OPTION_CATEGORIES.SUGAR].length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Sugar level (optional)</label>
+                  <RadioGroup 
+                    value={selectedOptions[OPTION_CATEGORIES.SUGAR]?.id || ''} 
+                    onValueChange={(value) => handleOptionChange(OPTION_CATEGORIES.SUGAR, value)}
+                  >
+                    <div className="space-y-2">
+                      <Label 
+                        htmlFor={`no-${OPTION_CATEGORIES.SUGAR}`}
+                        className="flex items-center space-x-2 border p-2 rounded-md cursor-pointer hover:bg-gray-50"
+                      >
+                        <RadioGroupItem 
+                          value=""
+                          id={`no-${OPTION_CATEGORIES.SUGAR}`}
+                        />
+                        <span>Regular sugar</span>
+                      </Label>
+                      
+                      {categorizedOptions[OPTION_CATEGORIES.SUGAR].map(option => (
+                        <Label 
+                          key={option.id}
+                          htmlFor={option.id}
+                          className="flex items-center space-x-2 border p-2 rounded-md cursor-pointer hover:bg-gray-50"
+                        >
+                          <RadioGroupItem 
+                            value={option.id} 
+                            id={option.id} 
+                          />
+                          <span>{option.label}</span>
+                          {option.price_adjustment > 0 && (
+                            <span className="text-xs text-gray-500">
+                              +{formatPrice(option.price_adjustment)}
+                            </span>
+                          )}
+                        </Label>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+              
+              {/* Ice options */}
+              {categorizedOptions[OPTION_CATEGORIES.ICE].length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Ice level (optional)</label>
+                  <RadioGroup 
+                    value={selectedOptions[OPTION_CATEGORIES.ICE]?.id || ''} 
+                    onValueChange={(value) => handleOptionChange(OPTION_CATEGORIES.ICE, value)}
+                  >
+                    <div className="space-y-2">
+                      <Label 
+                        htmlFor={`no-${OPTION_CATEGORIES.ICE}`}
+                        className="flex items-center space-x-2 border p-2 rounded-md cursor-pointer hover:bg-gray-50"
+                      >
+                        <RadioGroupItem 
+                          value=""
+                          id={`no-${OPTION_CATEGORIES.ICE}`}
+                        />
+                        <span>Regular ice</span>
+                      </Label>
+                      
+                      {categorizedOptions[OPTION_CATEGORIES.ICE].map(option => (
+                        <Label 
+                          key={option.id}
+                          htmlFor={option.id}
+                          className="flex items-center space-x-2 border p-2 rounded-md cursor-pointer hover:bg-gray-50"
+                        >
+                          <RadioGroupItem 
+                            value={option.id} 
+                            id={option.id} 
+                          />
+                          <span>{option.label}</span>
+                          {option.price_adjustment > 0 && (
+                            <span className="text-xs text-gray-500">
+                              +{formatPrice(option.price_adjustment)}
+                            </span>
+                          )}
+                        </Label>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
           )}
         </div>
         
@@ -284,7 +448,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ product, open, onClose })
           <Button 
             onClick={handleAddToCart} 
             className="w-full bg-black hover:bg-gray-800 text-white"
-            disabled={isAddingToCart || (options.length > 0 && !selectedOption) || (sizes.length > 0 && !selectedSize)}
+            disabled={isAddingToCart || (sizes.length > 0 && !selectedSize)}
           >
             {isAddingToCart ? (
               <div className="flex items-center gap-2">
