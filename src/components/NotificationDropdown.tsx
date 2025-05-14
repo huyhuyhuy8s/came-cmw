@@ -30,6 +30,15 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) 
     enabled: !!user
   });
 
+  // Filter to show only unread notifications first
+  const sortedNotifications = [...notifications].sort((a, b) => {
+    // First sort by read status (unread first)
+    if ((a.read === false && b.read === true) || (a.read === null && b.read === true)) return -1;
+    if ((a.read === true && b.read === false) || (a.read === true && b.read === null)) return 1;
+    // Then sort by creation date
+    return new Date(b.created_at || '') > new Date(a.created_at || '') ? 1 : -1;
+  });
+
   // Mutation to mark notification as read
   const { mutate: markAsRead } = useMutation({
     mutationFn: (notificationId: string) => markNotificationAsRead(notificationId),
@@ -90,24 +99,29 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) 
       ) : (
         <ScrollArea className="h-[300px]">
           <ul className="divide-y">
-            {notifications.map((notification: Notification) => (
-              <li key={notification.id} className="p-4 hover:bg-gray-50">
+            {sortedNotifications.map((notification: Notification) => (
+              <li key={notification.id} className={`p-4 hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''}`}>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center">
                       {getTypeIcon(notification.type)}
                       <span className="text-xs text-gray-500">{formatNotificationTime(notification.created_at)}</span>
+                      {!notification.read && (
+                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">New</span>
+                      )}
                     </div>
                     <p className="text-sm mt-1">{notification.message}</p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => handleMarkAsRead(notification.id)}
-                    title="Mark as read"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
+                  {!notification.read && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleMarkAsRead(notification.id)}
+                      title="Mark as read"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}

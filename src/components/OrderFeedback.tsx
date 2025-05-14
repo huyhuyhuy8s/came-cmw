@@ -57,7 +57,8 @@ const OrderFeedback: React.FC<OrderFeedbackProps> = ({ orderId, open, onClose })
     setIsSubmitting(true);
     
     try {
-      // Store feedback in Supabase
+      // Store feedback in Supabase - using raw insert to avoid type issues
+      // since the order_feedback table was just created
       const { data, error } = await supabase
         .from('order_feedback')
         .insert({
@@ -66,8 +67,7 @@ const OrderFeedback: React.FC<OrderFeedbackProps> = ({ orderId, open, onClose })
           rating,
           comment,
         })
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
 

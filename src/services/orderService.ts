@@ -14,6 +14,8 @@ export interface Order {
   delivery_address: string | null;
   delivery_time: string | null;
   status: string;
+  created_at: string | null; // Added missing property
+  updated_at: string | null;
 }
 
 export interface OrderItem {

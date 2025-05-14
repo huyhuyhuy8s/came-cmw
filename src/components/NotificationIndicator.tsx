@@ -11,7 +11,8 @@ interface NotificationIndicatorProps {
 const NotificationIndicator: React.FC<NotificationIndicatorProps> = ({ onClick }) => {
   const { notifications, isLoading } = useNotifications();
   
-  const unreadCount = notifications.length;
+  // Only count unread notifications (this was missing in the original)
+  const unreadCount = notifications.filter(notification => !notification.read).length;
   
   return (
     <Button 
