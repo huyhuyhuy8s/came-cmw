@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getOrderById, getOrderItems, Order, OrderItem, cancelOrder } from '@/services/orderService';
+import { getOrderById, getOrderItems, getOrderFeedbackStatus, Order, OrderItem, cancelOrder } from '@/services/orderService';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, Truck, PackageCheck, XCircle } from 'lucide-react';
+import { CheckCircle, Truck, PackageCheck, XCircle, Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import OrderFeedback from './OrderFeedback';
 
@@ -19,7 +20,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId }) => {
   const { user } = useAuth();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
-  const { data: order, isLoading: isOrderLoading, error: orderError } = useQuery({
+  const { data: order, isLoading: isOrderLoading, error: orderError, refetch: refetchOrder } = useQuery({
     queryKey: ['order', orderId],
     queryFn: () => getOrderById(orderId),
   });
@@ -27,6 +28,12 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId }) => {
   const { data: orderItems, isLoading: isOrderItemsLoading, error: orderItemsError } = useQuery({
     queryKey: ['orderItems', orderId],
     queryFn: () => getOrderItems(orderId),
+  });
+  
+  const { data: hasFeedback, isLoading: isFeedbackLoading } = useQuery({
+    queryKey: ['orderFeedback', orderId],
+    queryFn: () => getOrderFeedbackStatus(orderId),
+    enabled: order?.status === 'completed'
   });
 
   const [isCancelling, setIsCancelling] = useState(false);
@@ -37,22 +44,14 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId }) => {
       if (!orderId) throw new Error("Order ID is missing.");
       if (!user) throw new Error("User not authenticated.");
 
-      // Optimistically update the order status in the UI
-      // queryClient.setQueryData(['order', orderId], (oldOrder: Order) => ({
-      //   ...oldOrder,
-      //   status: 'cancelled',
-      // }));
-
-      // Call the cancelOrder service function
       await cancelOrder(orderId);
 
       toast({
         title: "Order Cancelled",
         description: "Your order has been successfully cancelled.",
       });
-
-      // Optionally, refetch the order to update the UI with the latest data
-      // await queryClient.refetchQueries(['order', orderId]);
+      
+      refetchOrder();
     } catch (error: any) {
       console.error("Error cancelling order:", error);
       toast({
@@ -211,14 +210,22 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId }) => {
               </Button>
             )}
 
-            {order.status === 'completed' && (
+            {order.status === 'completed' && !hasFeedback && !isFeedbackLoading && (
               <Button
                 variant="outline"
                 onClick={() => setIsFeedbackOpen(true)}
                 className="w-full md:w-auto"
               >
+                <Star className="mr-2 h-4 w-4" />
                 Leave Feedback
               </Button>
+            )}
+
+            {order.status === 'completed' && hasFeedback && (
+              <div className="bg-green-50 text-green-700 px-4 py-2 rounded-md flex items-center">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Feedback submitted
+              </div>
             )}
           </div>
           
