@@ -9,7 +9,7 @@ export interface User {
 }
 
 // Sign up
-export const signUp = async (email: string, password: string, name: string): Promise<User> => {
+export const signUp = async (email: string, password: string, name: string): Promise<void> => {
   // First, create the auth user
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -18,6 +18,8 @@ export const signUp = async (email: string, password: string, name: string): Pro
       data: {
         name,
       },
+      // Explicitly set emailRedirectTo to ensure correct redirect URL
+      emailRedirectTo: `${window.location.origin}/signin`,
     },
   });
 
@@ -51,12 +53,8 @@ export const signUp = async (email: string, password: string, name: string): Pro
     // Continue anyway since the auth user was created
   }
 
-  return {
-    id: data.user.id,
-    email: data.user.email!,
-    name,
-    avatar_url: null,
-  };
+  // No need to return the user as we don't want to auto-login
+  return;
 };
 
 // Sign in
