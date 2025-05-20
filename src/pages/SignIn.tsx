@@ -1,97 +1,67 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import * as authService from '@/services/authService';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const checkEmailConfirmed = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.rpc('check_email_confirmed', { email_to_check: email });
-      
-      if (error) {
-        console.error('Error checking email confirmation:', error);
-        return false;
-      }
-      
-      return !!data;
-    } catch (error) {
-      console.error('Error in email confirmation check:', error);
-      return false;
-    }
-  };
+  const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "Please enter both email and password",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
+    setIsLoading(true);
     
     try {
-      // Check if email is confirmed before allowing login
-      const isConfirmed = await checkEmailConfirmed(email);
+      // Check if email is confirmed
+      const { data, error } = await supabase.rpc('check_email_confirmed', { email_input: email });
       
-      if (!isConfirmed) {
+      if (error) throw error;
+      
+      if (!data) {
         toast({
-          title: "Account not confirmed",
-          description: "Please check your email and confirm your account before signing in.",
+          title: "Email not confirmed",
+          description: "Please confirm your email before signing in. Check your inbox for a confirmation link.",
           variant: "destructive",
         });
-        setIsSubmitting(false);
+        setIsLoading(false);
         return;
       }
       
+      // Proceed with login
       await login(email, password);
       navigate('/');
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Sign in error:', error);
+      
+      let errorMessage = "Invalid email or password";
+      
+      if (error.message.includes("Email not confirmed")) {
+        errorMessage = "Please confirm your email before signing in";
+      }
+      
       toast({
-        title: "Login failed",
-        description: error.message || "Invalid credentials",
+        title: "Sign in failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
-  };
-  
-  const handleForgotPassword = () => {
-    if (!email) {
-      toast({
-        title: "Error",
-        description: "Please enter your email address first",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Navigate to forgot password page or show a modal
-    navigate('/forgot-password', { state: { email } });
   };
   
   return (
-    <div className="py-12 came-container">
-      <div className="max-w-md mx-auto">
+    <div className="py-12">
+      <div className="came-container max-w-md mx-auto">
         <h1 className="text-3xl font-bold mono mb-8 text-center">Sign In</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -100,50 +70,48 @@ const SignIn = () => {
             <Input
               id="email"
               type="email"
-              placeholder="Your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
               required
+              autoComplete="email"
             />
           </div>
           
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <Label htmlFor="password">Password</Label>
-              <Button 
-                type="button" 
-                variant="link" 
-                className="p-0 h-auto text-sm"
-                onClick={handleForgotPassword}
-              >
+              <Link to="/forgot-password" className="text-sm text-gray-600 hover:underline">
                 Forgot password?
-              </Button>
+              </Link>
             </div>
             <Input
               id="password"
               type="password"
-              placeholder="Your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={isSubmitting}
               required
+              autoComplete="current-password"
             />
           </div>
           
           <Button 
-            type="submit" 
+            type="submit"
             className="w-full bg-black hover:bg-gray-800"
-            disabled={isSubmitting}
+            disabled={isLoading}
           >
-            {isSubmitting ? 'Signing in...' : 'Sign In'}
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                <span>Signing in...</span>
+              </div>
+            ) : 'Sign In'}
           </Button>
         </form>
         
-        <div className="mt-8 text-center">
-          <p className="text-gray-600">
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-semibold underline text-black">
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/signup" className="text-black hover:underline font-medium">
               Sign up
             </Link>
           </p>
