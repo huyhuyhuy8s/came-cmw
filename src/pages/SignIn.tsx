@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
@@ -16,22 +15,6 @@ const SignIn = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const checkEmailConfirmed = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.rpc('check_email_confirmed', { email_to_check: email });
-      
-      if (error) {
-        console.error('Error checking email confirmation:', error);
-        return false;
-      }
-      
-      return !!data;
-    } catch (error) {
-      console.error('Error in email confirmation check:', error);
-      return false;
-    }
-  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,28 +31,10 @@ const SignIn = () => {
     setIsSubmitting(true);
     
     try {
-      // Check if email is confirmed before allowing login
-      const isConfirmed = await checkEmailConfirmed(email);
-      
-      if (!isConfirmed) {
-        toast({
-          title: "Account not confirmed",
-          description: "Please check your email and confirm your account before signing in.",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
       await login(email, password);
       navigate('/');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid credentials",
-        variant: "destructive",
-      });
     } finally {
       setIsSubmitting(false);
     }

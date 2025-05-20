@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const SignUp = () => {
   const [username, setUsername] = useState('');
@@ -39,22 +39,6 @@ const SignUp = () => {
     }
     
     return null;
-  };
-  
-  const checkEmailExists = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.rpc('check_email_exists', { email_to_check: email });
-      
-      if (error) {
-        console.error('Error checking email:', error);
-        return false;
-      }
-      
-      return !!data;
-    } catch (error) {
-      console.error('Error in email check:', error);
-      return false;
-    }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,35 +75,10 @@ const SignUp = () => {
     setIsSubmitting(true);
     
     try {
-      // Check if email exists before registering
-      const emailExists = await checkEmailExists(email);
-      if (emailExists) {
-        toast({
-          title: "Error",
-          description: "This email is already registered. Please try signing in instead.",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Register user but don't automatically sign in
       await register(email, password, username);
-      
-      toast({
-        title: "Success",
-        description: "Account created successfully! Please check your email to confirm your account before signing in.",
-      });
-      
-      // Redirect to home page without logging in
       navigate('/');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Registration error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create account. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setIsSubmitting(false);
     }

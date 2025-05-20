@@ -92,11 +92,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, username: string) => {
     setIsLoading(true);
     try {
-      // Only register the user but don't set the user state or auto-login
-      await authService.signUp(email, password, username);
-      
-      // Don't set user here to avoid auto-login
-      // Don't navigate here - let the caller handle redirection
+      const user = await authService.signUp(email, password, username);
+      setUser(user);
+      toast({
+        title: 'Registration successful',
+        description: `Welcome to Came, ${username || email}!`,
+      });
+      navigate('/');
     } catch (error: any) {
       const errorMessage = error.message || 'Could not create account';
       toast({
