@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const SignUp = () => {
   const [username, setUsername] = useState('');
@@ -13,6 +13,7 @@ const SignUp = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -39,6 +40,25 @@ const SignUp = () => {
     }
     
     return null;
+  };
+  
+  const checkEmailExists = async (email: string) => {
+    setIsCheckingEmail(true);
+    try {
+      const { data, error } = await supabase.rpc('check_if_email_exists', { email_to_check: email });
+      
+      if (error) {
+        console.error('Error checking email:', error);
+        return false;
+      }
+      
+      return data; // Returns true if email exists
+    } catch (error) {
+      console.error('Exception checking email:', error);
+      return false;
+    } finally {
+      setIsCheckingEmail(false);
+    }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,14 +91,38 @@ const SignUp = () => {
       });
       return;
     }
+
+    // Check if email exists before proceeding
+    const emailExists = await checkEmailExists(email);
+    if (emailExists) {
+      toast({
+        title: "Account already exists",
+        description: "An account with this email already exists. Please sign in instead.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
       await register(email, password, username);
+      
+      // Display success message
+      toast({
+        title: "Registration successful",
+        description: "Please check your email to confirm your account before signing in.",
+      });
+      
+      // Redirect to home page without auto-login
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
+      toast({
+        title: "Registration failed",
+        description: error.message || "Could not create account",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +154,7 @@ const SignUp = () => {
               placeholder="Your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCheckingEmail}
               required
             />
           </div>
@@ -153,9 +197,9 @@ const SignUp = () => {
           <Button 
             type="submit" 
             className="w-full bg-black hover:bg-gray-800"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isCheckingEmail}
           >
-            {isSubmitting ? 'Creating account...' : 'Sign Up'}
+            {isSubmitting ? 'Creating account...' : (isCheckingEmail ? 'Checking email...' : 'Sign Up')}
           </Button>
         </form>
         
