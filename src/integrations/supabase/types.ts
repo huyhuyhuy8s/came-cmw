@@ -423,7 +423,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
-          label: string
+          label?: string
           price?: number
           updated_at?: string | null
           value?: string
@@ -571,10 +571,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      check_if_email_exists: {
-        Args: { email_to_check: string }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
@@ -596,7 +593,7 @@ export type Tables<
   }
     ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
   ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
