@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -111,7 +112,7 @@ const SignUp = () => {
       // Display success message
       toast({
         title: "Registration successful",
-        description: "Please check your email to confirm your account before signing in.",
+        description: "Please check your email to confirm your account before signing in."
       });
       
       // Redirect to home page without auto-login
