@@ -17,6 +17,30 @@ const SignUp = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const validatePassword = (password: string) => {
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    
+    if (!hasUppercase) {
+      return "Password must contain at least one uppercase letter";
+    }
+    
+    if (!hasLowercase) {
+      return "Password must contain at least one lowercase letter";
+    }
+    
+    if (!hasNumber) {
+      return "Password must contain at least one number";
+    }
+    
+    if (password.length < 6) {
+      return "Password must be at least 6 characters long";
+    }
+    
+    return null;
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -38,10 +62,11 @@ const SignUp = () => {
       return;
     }
     
-    if (password.length < 6) {
+    const passwordError = validatePassword(password);
+    if (passwordError) {
       toast({
         title: "Error",
-        description: "Password must be at least 6 characters long",
+        description: passwordError,
         variant: "destructive",
       });
       return;
@@ -101,6 +126,15 @@ const SignUp = () => {
               disabled={isSubmitting}
               required
             />
+            <div className="text-sm text-gray-500 space-y-1">
+              <p>Password must:</p>
+              <ul className="list-disc pl-5">
+                <li>Be at least 6 characters long</li>
+                <li>Contain at least 1 uppercase letter</li>
+                <li>Contain at least 1 lowercase letter</li>
+                <li>Contain at least 1 number</li>
+              </ul>
+            </div>
           </div>
           
           <div className="space-y-2">
