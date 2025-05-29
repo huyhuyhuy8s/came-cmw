@@ -43,7 +43,7 @@ const SignUpForm = () => {
     return null;
   };
   
-  const checkEmailExists = async (email: string) => {
+  const checkEmailExists = async (email: string): Promise<boolean> => {
     setIsCheckingEmail(true);
     try {
       const { data, error } = await supabase.rpc('check_if_email_exists', { email_to_check: email });
@@ -58,7 +58,7 @@ const SignUpForm = () => {
         return false;
       }
       
-      return data; // Returns true if email exists
+      return data || false;
     } catch (error: any) {
       console.error('Exception checking email:', error);
       toast({
@@ -103,7 +103,6 @@ const SignUpForm = () => {
       return;
     }
 
-    // Check if email exists before proceeding
     const emailExists = await checkEmailExists(email);
     if (emailExists) {
       toast({
@@ -119,7 +118,6 @@ const SignUpForm = () => {
     try {
       await register(email, password, username);
       
-      // Display success message
       toast({
         title: "Registration successful",
         description: "Please check your email to confirm your account before signing in."

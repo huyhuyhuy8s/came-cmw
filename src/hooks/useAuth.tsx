@@ -1,10 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as authService from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import { User } from '@/services/authService';
 import { useNavigate } from 'react-router-dom';
+import { notificationObserverService, ToastObserver, ConsoleObserver } from '@/services/notificationObserverService';
 
 interface AuthContextProps {
   user: User | null;
@@ -25,14 +25,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // Set up Observer pattern for notifications
   useEffect(() => {
-    // Set up auth state listener first
+    const toastObserver = new ToastObserver((message) => {
+      toast({ title: 'Notification', description: message });
+    });
+    const consoleObserver = new ConsoleObserver();
+    
+    notificationObserverService.addObserver(toastObserver);
+    notificationObserverService.addObserver(consoleObserver);
+    
+    return () => {
+      notificationObserverService.removeObserver(toastObserver);
+      notificationObserverService.removeObserver(consoleObserver);
+    };
+  }, [toast]);
+  
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session) {
-          // When we have a session, fetch the user profile
           if (session.user) {
-            // Use setTimeout to avoid potential deadlocks
             setTimeout(async () => {
               try {
                 const userProfile = await authService.getCurrentUser();
@@ -43,13 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }, 0);
           }
         } else {
-          // No session means user is signed out
           setUser(null);
         }
       }
     );
     
-    // Check for existing session
     const checkAuth = async () => {
       try {
         const userProfile = await authService.getCurrentUser();
@@ -71,7 +82,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // First check if the email is confirmed
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -87,9 +97,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const user = await authService.signIn(email, password);
       setUser(user);
-      toast({
-        title: 'Login successful',
-        description: `Welcome back, ${user.name || user.email}!`,
+      
+      // Use Observer pattern for notification
+      notificationObserverService.notify({
+        message: `Welcome back, ${user.name || user.email}!`,
+        type: 'success'
       });
     } catch (error: any) {
       toast({
@@ -106,15 +118,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, username: string) => {
     setIsLoading(true);
     try {
-      // Register the user but don't auto-login
       await authService.signUp(email, password, username);
       
-      toast({
-        title: 'Registration successful',
-        description: `Welcome to Came, ${username || email}! Please check your email to confirm your account.`,
+      notificationObserverService.notify({
+        message: `Welcome to Came, ${username || email}! Please check your email to confirm your account.`,
+        type: 'success'
       });
-      
-      // Don't set the user state here to prevent auto-login
       
     } catch (error: any) {
       const errorMessage = error.message || 'Could not create account';
@@ -135,9 +144,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authService.signOut();
       setUser(null);
-      toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out.',
+      notificationObserverService.notify({
+        message: 'You have been successfully logged out.',
+        type: 'info'
       });
     } catch (error: any) {
       toast({
@@ -154,9 +163,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       await authService.resetPassword(email);
-      toast({
-        title: 'Password reset email sent',
-        description: 'Check your inbox for instructions to reset your password.',
+      notificationObserverService.notify({
+        message: 'Check your inbox for instructions to reset your password.',
+        type: 'info'
       });
     } catch (error: any) {
       toast({
@@ -177,9 +186,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const updatedUser = await authService.updateUserProfile(user.id, data);
       setUser(updatedUser);
-      toast({
-        title: 'Profile updated',
-        description: 'Your profile has been successfully updated.',
+      notificationObserverService.notify({
+        message: 'Your profile has been successfully updated.',
+        type: 'success'
       });
     } catch (error: any) {
       toast({
